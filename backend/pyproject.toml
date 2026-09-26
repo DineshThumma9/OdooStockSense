@@ -11,6 +11,7 @@ dependencies = [
     # ORM + Validation (SQLModel = SQLAlchemy + Pydantic in one)
     "sqlmodel>=0.0.21",
     "pydantic[email]>=2.7.0",
+    "pydantic-settings>=2.2.0",
     # Database
     "psycopg2-binary>=2.9.9",           # PostgreSQL driver
     "alembic>=1.13.0",                  # DB migrations
