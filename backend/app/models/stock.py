@@ -5,6 +5,8 @@ from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
+from app.core.utils import utcnow
+
 
 class MovementType(str, Enum):
     receipt = "receipt"
@@ -44,7 +46,7 @@ class StockLedger(SQLModel, table=True):
     reference_ref: str            # Human ref e.g. "REC/2024/0001"
 
     created_by: uuid.UUID = Field(foreign_key="users.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class StockLedgerRead(SQLModel):
@@ -74,7 +76,7 @@ class StockQuant(SQLModel, table=True):
     product_id: uuid.UUID = Field(foreign_key="products.id", index=True)
     location_id: uuid.UUID = Field(foreign_key="locations.id", index=True)
     qty: float = Field(default=0.0)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
     # DB-level unique constraint enforced via Alembic migration:
     # UniqueConstraint("product_id", "location_id", name="uq_stock_quant")

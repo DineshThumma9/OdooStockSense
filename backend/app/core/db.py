@@ -2,14 +2,13 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from .config import settings
 
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
-connect_args = {"check_same_thread": False} if is_sqlite else {}
-
+# PostgreSQL engine with connection pooling
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=settings.DEBUG,  # SQL query logging in dev
-    connect_args=connect_args,
-    **({} if is_sqlite else {"pool_pre_ping": True}),
+    echo=settings.DEBUG,          # SQL query logging in dev
+    pool_pre_ping=True,           # Recycle stale connections
+    pool_size=10,                 # Max persistent connections
+    max_overflow=20,              # Extra connections under load
 )
 
 

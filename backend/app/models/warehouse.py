@@ -5,6 +5,8 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core.utils import utcnow
+
 
 class LocationType(str, Enum):
     input = "input"       # Where goods arrive (receiving dock)
@@ -26,7 +28,7 @@ class Warehouse(WarehouseBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
     locations: List["Location"] = Relationship(back_populates="warehouse")
 

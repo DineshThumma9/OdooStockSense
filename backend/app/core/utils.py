@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def make_reference(prefix: str, year: int, count: int) -> str:
@@ -13,7 +13,7 @@ def make_reference(prefix: str, year: int, count: int) -> str:
 
 
 def utcnow() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 def new_uuid() -> uuid.UUID:

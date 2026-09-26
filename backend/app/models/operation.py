@@ -5,6 +5,8 @@ from typing import List, Optional
 
 from sqlmodel import Field, SQLModel
 
+from app.core.utils import utcnow
+
 
 class OperationStatus(str, Enum):
     draft = "draft"       # Created, not submitted
@@ -62,8 +64,8 @@ class Receipt(ReceiptBase, table=True):
         default=None, foreign_key="users.id"
     )
     validated_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class ReceiptCreate(ReceiptBase):
@@ -136,8 +138,8 @@ class DeliveryOrder(DeliveryOrderBase, table=True):
         default=None, foreign_key="users.id"
     )
     validated_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class DeliveryOrderCreate(DeliveryOrderBase):
@@ -201,8 +203,8 @@ class InternalTransfer(InternalTransferBase, table=True):
         default=None, foreign_key="users.id"
     )
     validated_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class InternalTransferCreate(InternalTransferBase):
@@ -274,7 +276,7 @@ class StockAdjustment(StockAdjustmentBase, table=True):
         default=None, foreign_key="users.id"
     )
     validated_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class StockAdjustmentCreate(StockAdjustmentBase):

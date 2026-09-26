@@ -5,7 +5,13 @@ import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Products } from './pages/Products';
 import { Operations } from './pages/Operations';
+import { Receipts } from './pages/Receipts';
+import { Deliveries } from './pages/Deliveries';
+import { Transfers } from './pages/Transfers';
+import { Adjustments } from './pages/Adjustments';
 import { StockLedger } from './pages/StockLedger';
+import { Settings } from './pages/Settings';
+import { Profile } from './pages/Profile';
 
 function App() {
   return (
@@ -26,10 +32,17 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<Products />} />
+
+          {/* Operations hub + sub-pages */}
           <Route path="operations" element={<Operations />} />
+          <Route path="receipts" element={<Receipts />} />
+          <Route path="deliveries" element={<Deliveries />} />
+          <Route path="transfers" element={<Transfers />} />
+          <Route path="adjustments" element={<Adjustments />} />
+
           <Route path="history" element={<StockLedger />} />
-          <Route path="settings" element={<div className="p-6">Settings Page</div>} />
-          <Route path="profile" element={<div className="p-6">Profile Page</div>} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         {/* Catch-all */}

@@ -6,6 +6,9 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 
+from app.core.utils import utcnow
+
+
 class UserRole(str, Enum):
     manager = "manager"
     staff = "staff"
@@ -25,8 +28,8 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     password_hash: str
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 # ── Request / Response Schemas ───────────────────────────────────────────────
@@ -66,7 +69,7 @@ class OTPToken(SQLModel, table=True):
     token: str = Field(max_length=6)
     expires_at: datetime
     is_used: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 # ── Auth Schemas ─────────────────────────────────────────────────────────────

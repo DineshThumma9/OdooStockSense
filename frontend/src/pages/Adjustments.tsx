@@ -1,0 +1,273 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  PenTool, Plus, Loader2, CheckCircle2, XCircle, Clock, FileText, Trash2, TrendingUp, TrendingDown, Minus,
+} from 'lucide-react';
+import { adjustmentsApi, type Adjustment, type OperationStatus } from '@/api/operations';
+import { productsApi, type ProductRead } from '@/api/products';
+import { warehousesApi, type Location } from '@/api/warehouses';
+
+const STATUS_COLORS: Record<OperationStatus, string> = {
+  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  waiting: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  ready: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  canceled: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const STATUS_ICONS: Record<OperationStatus, React.ReactNode> = {
+  draft: <FileText className="w-3 h-3" />,
+  waiting: <Clock className="w-3 h-3" />,
+  ready: <Clock className="w-3 h-3" />,
+  done: <CheckCircle2 className="w-3 h-3" />,
+  canceled: <XCircle className="w-3 h-3" />,
+};
+
+function StatusBadge({ status }: { status: OperationStatus }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[status]}`}>
+      {STATUS_ICONS[status]}
+      {status}
+    </span>
+  );
+}
+
+interface FormLine { product_id: string; counted_qty: number; }
+
+export function Adjustments() {
+  const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [products, setProducts] = useState<ProductRead[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  const [location, setLocation] = useState('');
+  const [notes, setNotes] = useState('');
+  const [lines, setLines] = useState<FormLine[]>([{ product_id: '', counted_qty: 0 }]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    adjustmentsApi
+      .list({ status: (statusFilter as OperationStatus) || undefined, limit: 50 })
+      .then((res) => { setAdjustments(res.items); setTotal(res.total); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    productsApi.list({ limit: 200 }).then((r) => setProducts(r.items)).catch(console.error);
+    warehousesApi.listLocations().then(setLocations).catch(console.error);
+  }, []);
+
+  const addLine = () => setLines((prev) => [...prev, { product_id: '', counted_qty: 0 }]);
+  const removeLine = (i: number) => setLines((prev) => prev.filter((_, idx) => idx !== i));
+  const updateLine = (i: number, field: keyof FormLine, value: string | number) =>
+    setLines((prev) => prev.map((l, idx) => idx === i ? { ...l, [field]: value } : l));
+
+  const handleCreate = async () => {
+    if (!location) return alert('Select a location');
+    const validLines = lines.filter((l) => l.product_id);
+    if (validLines.length === 0) return alert('Add at least one product line');
+    setSubmitting(true);
+    try {
+      const created = await adjustmentsApi.create({
+        location_id: location,
+        notes: notes || undefined,
+        lines: validLines,
+      });
+      setAdjustments((prev) => [created, ...prev]);
+      setIsOpen(false);
+      setLines([{ product_id: '', counted_qty: 0 }]);
+      setLocation(''); setNotes('');
+    } catch (err: any) {
+      alert(typeof err === 'string' ? err : 'Failed to create adjustment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleValidate = async (id: string) => {
+    if (!confirm('Validate this adjustment? Stock will be updated.')) return;
+    try {
+      const updated = await adjustmentsApi.validate(id);
+      setAdjustments((prev) => prev.map((a) => a.id === id ? updated : a));
+    } catch (err: any) { alert(typeof err === 'string' ? err : 'Validation failed'); }
+  };
+
+  const getLocationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id.slice(0, 8) + '…';
+
+  // Calculate total delta for an adjustment
+  const getDelta = (adj: Adjustment): number =>
+    adj.lines.reduce((sum, l) => sum + (l.counted_qty - l.system_qty), 0);
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <span className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+              <PenTool className="w-6 h-6 text-blue-600" />
+            </span>
+            Inventory Adjustments
+          </h2>
+          <p className="text-slate-500 mt-1">{loading ? 'Loading…' : `${total} stock adjustments`}</p>
+        </div>
+
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20">
+              <Plus className="w-4 h-4 mr-2" /> New Adjustment
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Create Inventory Adjustment</DialogTitle></DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+                Enter the <strong>physical count</strong> for each product. The system will compute the difference automatically.
+              </div>
+              <div className="space-y-2">
+                <Label>Location *</Label>
+                <Select value={location} onValueChange={setLocation}>
+                  <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Physical count — September 2024" />
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Products & Counted Quantities</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                    <Plus className="w-3 h-3 mr-1" /> Add Line
+                  </Button>
+                </div>
+                {lines.map((line, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <Select value={line.product_id} onValueChange={(v) => updateLine(i, 'product_id', v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                      <SelectContent>
+                        {products.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name} ({p.sku})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number" min={0} step={0.01}
+                      value={line.counted_qty}
+                      onChange={(e) => updateLine(i, 'counted_qty', parseFloat(e.target.value) || 0)}
+                      className="w-28" placeholder="Counted"
+                    />
+                    {lines.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleCreate} disabled={submitting} className="w-full mt-2">
+                {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Create Adjustment
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex gap-3">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
+          <SelectTrigger className="w-44 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="done">Done</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card className="border-0 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Loading adjustments…
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                <TableRow>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Lines</TableHead>
+                  <TableHead>Net Change</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {adjustments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-slate-400 py-16">
+                      No adjustments yet. Create one to sync physical counts.
+                    </TableCell>
+                  </TableRow>
+                ) : adjustments.map((a) => {
+                  const delta = getDelta(a);
+                  return (
+                    <TableRow key={a.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
+                      <TableCell className="font-mono text-sm font-semibold text-blue-600">{a.reference}</TableCell>
+                      <TableCell><StatusBadge status={a.status} /></TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-300 text-sm">{getLocationName(a.location_id)}</TableCell>
+                      <TableCell className="text-slate-500 text-sm">{a.lines.length} line(s)</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center gap-1 text-sm font-semibold ${
+                          delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-500' : 'text-slate-400'
+                        }`}>
+                          {delta > 0 ? <TrendingUp className="w-3 h-3" /> : delta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                          {delta > 0 ? '+' : ''}{delta.toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-slate-500 text-sm">{new Date(a.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        {a.status === 'draft' && (
+                          <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-xs h-7" onClick={() => handleValidate(a.id)}>
+                            Validate
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
