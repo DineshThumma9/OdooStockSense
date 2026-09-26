@@ -1,12 +1,27 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "StockSense IMS — FastAPI Backend"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "bcrypt>=5.0.0",
-    "fastapi>=0.141.1",
-    "pydantic>=2.13.5",
-    "sqlmodel>=0.0.47",
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    # ORM + Validation (SQLModel = SQLAlchemy + Pydantic in one)
+    "sqlmodel>=0.0.21",
+    "pydantic[email]>=2.7.0",
+    # Database
+    "psycopg2-binary>=2.9.9",           # PostgreSQL driver
+    "alembic>=1.13.0",                  # DB migrations
+    # Auth
+    "python-jose[cryptography]>=3.3.0", # JWT tokens
+    "passlib[bcrypt]>=1.7.4",           # Password hashing
+    "python-multipart>=0.0.9",          # Form data support
+    # Email (OTP)
+    "fastapi-mail>=1.4.1",
+    # SSE (Server-Sent Events — live dashboard & alerts)
+    "sse-starlette>=2.1.0",
+    # Utilities
+    "python-dotenv>=1.0.0",
 ]

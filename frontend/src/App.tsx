@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { AuthGuard } from './components/AuthGuard';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Products } from './pages/Products';
@@ -10,10 +11,18 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Protected Routes */}
-        <Route path="/" element={<DashboardLayout />}>
+
+        {/* Protected — all children require a valid JWT */}
+        <Route
+          path="/"
+          element={
+            <AuthGuard>
+              <DashboardLayout />
+            </AuthGuard>
+          }
+        >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<Products />} />
@@ -22,6 +31,9 @@ function App() {
           <Route path="settings" element={<div className="p-6">Settings Page</div>} />
           <Route path="profile" element={<div className="p-6">Profile Page</div>} />
         </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );
